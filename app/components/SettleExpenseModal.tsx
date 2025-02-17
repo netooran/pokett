@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { formatCurrency } from '@/utils/currencyUtils';
 
 interface SettleExpenseModalProps {
   onClose: () => void;
@@ -24,16 +25,6 @@ interface SettleExpenseModalProps {
   }>;
 }
 
-// Add the formatCurrency utility function
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-};
-
 export const SettleExpenseModal: React.FC<SettleExpenseModalProps> = ({
   onClose,
   onSettle,
@@ -43,7 +34,9 @@ export const SettleExpenseModal: React.FC<SettleExpenseModalProps> = ({
   const [from, setFrom] = useState(existingSettlement?.from || '');
   const [to, setTo] = useState(existingSettlement?.to || '');
   const [amount, setAmount] = useState(existingSettlement?.amount || 0);
-  const [description, setDescription] = useState(existingSettlement?.description || '');
+  const [description, setDescription] = useState(
+    existingSettlement?.description || ''
+  );
 
   useEffect(() => {
     if (existingSettlement) {
@@ -57,7 +50,7 @@ export const SettleExpenseModal: React.FC<SettleExpenseModalProps> = ({
   // Get members who owe money (debtors)
   const debtors = useMemo(() => {
     const debtorMap = new Map<string, number>();
-    suggestedSettlements.forEach(s => {
+    suggestedSettlements.forEach((s) => {
       const currentTotal = debtorMap.get(s.from) || 0;
       debtorMap.set(s.from, currentTotal + s.amount);
     });
@@ -70,8 +63,8 @@ export const SettleExpenseModal: React.FC<SettleExpenseModalProps> = ({
   const validReceivers = useMemo(() => {
     if (!from) return [];
     return suggestedSettlements
-      .filter(s => s.from === from)
-      .map(s => ({ member: s.to, amount: s.amount }))
+      .filter((s) => s.from === from)
+      .map((s) => ({ member: s.to, amount: s.amount }))
       .sort((a, b) => b.amount - a.amount);
   }, [from, suggestedSettlements]);
 
@@ -79,7 +72,7 @@ export const SettleExpenseModal: React.FC<SettleExpenseModalProps> = ({
   useEffect(() => {
     if (from && to) {
       const settlement = suggestedSettlements.find(
-        s => s.from === from && s.to === to
+        (s) => s.from === from && s.to === to
       );
       if (settlement) {
         setAmount(settlement.amount);
@@ -136,7 +129,9 @@ export const SettleExpenseModal: React.FC<SettleExpenseModalProps> = ({
                 }}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 focus:ring-2 focus:ring-indigo-600 focus:border-transparent"
               >
-                <option value="" disabled>Select payer</option>
+                <option value="" disabled>
+                  Select payer
+                </option>
                 {debtors.map(({ member }) => (
                   <option key={member} value={member}>
                     {member}
@@ -172,12 +167,11 @@ export const SettleExpenseModal: React.FC<SettleExpenseModalProps> = ({
                 disabled={!from || validReceivers.length === 0}
               >
                 <option value="" disabled>
-                  {!from 
-                    ? "Select payer first"
-                    : validReceivers.length === 0 
-                      ? "No pending payments"
-                      : "Select receiver"
-                  }
+                  {!from
+                    ? 'Select payer first'
+                    : validReceivers.length === 0
+                    ? 'No pending payments'
+                    : 'Select receiver'}
                 </option>
                 {validReceivers.map(({ member }) => (
                   <option key={member} value={member}>
@@ -247,4 +241,4 @@ export const SettleExpenseModal: React.FC<SettleExpenseModalProps> = ({
       </div>
     </div>
   );
-}; 
+};

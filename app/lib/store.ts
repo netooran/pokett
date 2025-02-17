@@ -61,16 +61,6 @@ class Store {
     },
   ];
 
-  // Add a utility function for formatting currency
-  formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  }
-
   // Member methods
   getAllMembers(): Member[] {
     return this.members;

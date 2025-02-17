@@ -3,18 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { DeleteConfirmationModal } from '@/app/components/DeleteConfirmationModal';
-
 import { Member, Group } from '@/types/models';
-
-// Add a utility function for formatting currency
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-};
+import { formatCurrency } from '@/utils/currencyUtils';
 
 interface EditGroupModalProps {
   group: Group;

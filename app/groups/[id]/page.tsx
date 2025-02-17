@@ -7,6 +7,8 @@ import { ExpenseModal } from '@/app/components/ExpenseModal';
 import { DeleteConfirmationModal } from '@/app/components/DeleteConfirmationModal';
 import { SettleExpenseModal } from '@/app/components/SettleExpenseModal';
 import { Group, Member, Expense, MemberBalance } from '@/types/models';
+import { formatCurrency } from '@/utils/currencyUtils';
+import { formatDate } from '@/utils/dateUtils';
 
 function calculateBalances(
   expenses: Expense[],
@@ -32,53 +34,6 @@ function calculateBalances(
     };
   });
 }
-
-// Add the formatCurrency utility function
-const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-};
-
-// Add this helper function near the top with other utility functions
-const formatDate = (date: Date): string => {
-  const now = new Date();
-  const expenseDate = new Date(date);
-
-  // If it's today, show time
-  if (expenseDate.toDateString() === now.toDateString()) {
-    return `Today, ${expenseDate.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    })}`;
-  }
-
-  // If it's yesterday
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (expenseDate.toDateString() === yesterday.toDateString()) {
-    return 'Yesterday';
-  }
-
-  // If it's within this year, show date without year
-  if (expenseDate.getFullYear() === now.getFullYear()) {
-    return expenseDate.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
-  }
-
-  // Otherwise show full date
-  return expenseDate.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-};
 
 function isGroupFullySettled(balances: MemberBalance[]): boolean {
   return balances.every((balance) => balance.netBalance === 0);
