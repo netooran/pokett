@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { EditGroupModal } from '@/app/components/EditGroupModal';
 import { ExpenseModal } from '@/app/components/ExpenseModal';
 import { DeleteConfirmationModal } from '@/app/components/DeleteConfirmationModal';
+import { SettleExpenseModal } from '@/app/components/SettleExpenseModal';
 
 interface Expense {
   id: string;
@@ -35,15 +36,18 @@ interface Member {
   name: string;
 }
 
-function calculateBalances(expenses: Expense[], members: string[]): MemberBalance[] {
-  return members.map(member => {
+function calculateBalances(
+  expenses: Expense[],
+  members: string[]
+): MemberBalance[] {
+  return members.map((member) => {
     const paid = expenses
-      .filter(e => e.paidBy === member)
+      .filter((e) => e.paidBy === member)
       .reduce((sum, e) => sum + e.amount, 0);
 
     const owes = expenses.reduce((sum, e) => {
       if (e.splitBetween.includes(member)) {
-        return sum + (e.amount / e.splitBetween.length);
+        return sum + e.amount / e.splitBetween.length;
       }
       return sum;
     }, 0);
@@ -67,7 +71,11 @@ const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
-export default function GroupPage({ params }: { params: Promise<{ id: string }> }) {
+export default function GroupPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const [group, setGroup] = useState<Group | null>(null);
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -77,6 +85,7 @@ export default function GroupPage({ params }: { params: Promise<{ id: string }> 
   const [isEditingGroup, setIsEditingGroup] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
+  const [isSettling, setIsSettling] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -106,7 +115,11 @@ export default function GroupPage({ params }: { params: Promise<{ id: string }> 
     fetchData();
   }, [id]);
 
-  const handleEditGroup = async (id: string, name: string, members: string[]) => {
+  const handleEditGroup = async (
+    id: string,
+    name: string,
+    members: string[]
+  ) => {
     try {
       const response = await fetch(`/api/groups/${id}`, {
         method: 'PATCH',
@@ -148,8 +161,10 @@ export default function GroupPage({ params }: { params: Promise<{ id: string }> 
 
       const newExpense = await response.json();
       setExpenses((prev) => [...prev, newExpense]);
-      setGroup((prev) => 
-        prev ? { ...prev, totalExpenses: prev.totalExpenses + expense.amount } : null
+      setGroup((prev) =>
+        prev
+          ? { ...prev, totalExpenses: prev.totalExpenses + expense.amount }
+          : null
       );
       setIsAddingExpense(false);
     } catch (error) {
@@ -174,33 +189,36 @@ export default function GroupPage({ params }: { params: Promise<{ id: string }> 
 
       // Validate that all split members are group members
       const invalidMembers = expenseData.splitBetween.filter(
-        member => !group?.members.includes(member)
+        (member) => !group?.members.includes(member)
       );
       if (invalidMembers.length > 0) {
-        throw new Error(`Invalid members in split: ${invalidMembers.join(', ')}`);
-      }
-
-      const response = await fetch(`/api/groups/${id}/expenses/${editingExpense.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(expenseData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => null);
         throw new Error(
-          errorData?.error || 'Failed to update expense'
+          `Invalid members in split: ${invalidMembers.join(', ')}`
         );
       }
 
+      const response = await fetch(
+        `/api/groups/${id}/expenses/${editingExpense.id}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(expenseData),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.error || 'Failed to update expense');
+      }
+
       const updatedExpense = await response.json();
-      
+
       setExpenses((prev) =>
         prev.map((exp) => (exp.id === editingExpense.id ? updatedExpense : exp))
       );
-      
+
       setGroup((prev) => {
         if (!prev) return null;
         const oldAmount = editingExpense.amount;
@@ -210,11 +228,13 @@ export default function GroupPage({ params }: { params: Promise<{ id: string }> 
           totalExpenses: prev.totalExpenses - oldAmount + newAmount,
         };
       });
-      
+
       setEditingExpense(null);
     } catch (error) {
       console.error('Error updating expense:', error);
-      alert(error instanceof Error ? error.message : 'Failed to update expense');
+      alert(
+        error instanceof Error ? error.message : 'Failed to update expense'
+      );
       setEditingExpense(null);
     }
   };
@@ -238,18 +258,60 @@ export default function GroupPage({ params }: { params: Promise<{ id: string }> 
 
       // Update expenses list
       setExpenses((prev) => prev.filter((e) => e.id !== expenseId));
-      
+
       // Update group total
       setGroup((prev) =>
         prev
-          ? { ...prev, totalExpenses: prev.totalExpenses - deletedExpense.amount }
+          ? {
+              ...prev,
+              totalExpenses: prev.totalExpenses - deletedExpense.amount,
+            }
           : null
       );
-      
+
       setDeletingExpense(null);
     } catch (error) {
       console.error('Error deleting expense:', error);
       setDeletingExpense(null);
+    }
+  };
+
+  const handleSettle = async (settlement: {
+    from: string;
+    to: string;
+    amount: number;
+    description?: string;
+  }) => {
+    try {
+      const response = await fetch(`/api/groups/${id}/expenses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          description: settlement.description,
+          amount: settlement.amount,
+          paidBy: settlement.from,
+          splitBetween: [settlement.to],
+          isSettlement: true,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to record settlement');
+      }
+
+      const newExpense = await response.json();
+      setExpenses((prev) => [...prev, newExpense]);
+      setGroup((prev) =>
+        prev
+          ? { ...prev, totalExpenses: prev.totalExpenses + settlement.amount }
+          : null
+      );
+      setIsSettling(false);
+    } catch (error) {
+      console.error('Error recording settlement:', error);
+      alert('Failed to record settlement. Please try again.');
     }
   };
 
@@ -273,7 +335,9 @@ export default function GroupPage({ params }: { params: Promise<{ id: string }> 
           </Link>
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">{group.name}</h1>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                {group.name}
+              </h1>
               <div className="flex flex-wrap gap-2">
                 {group.members.map((member) => (
                   <span
@@ -293,6 +357,12 @@ export default function GroupPage({ params }: { params: Promise<{ id: string }> 
                 Edit Group
               </button>
               <button
+                onClick={() => setIsSettling(true)}
+                className="bg-white text-indigo-700 px-4 py-2 rounded-md hover:bg-indigo-50 transition-colors border border-indigo-200"
+              >
+                Settle
+              </button>
+              <button
                 onClick={() => setIsAddingExpense(true)}
                 className="bg-indigo-700 text-white px-4 py-2 rounded-md hover:bg-indigo-800 transition-colors"
               >
@@ -306,7 +376,9 @@ export default function GroupPage({ params }: { params: Promise<{ id: string }> 
           <div className="lg:col-span-2">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="text-lg font-semibold text-gray-900">Expenses</h2>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Expenses
+                </h2>
               </div>
               <div className="divide-y divide-gray-200">
                 {expenses.length === 0 ? (
@@ -385,53 +457,88 @@ export default function GroupPage({ params }: { params: Promise<{ id: string }> 
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
                 <div className="flex justify-between items-center">
-                  <h2 className="text-lg font-semibold text-gray-900">Summary</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Summary
+                  </h2>
                   <div className="text-gray-600">
-                    Total: <span className="font-medium text-gray-900">{formatCurrency(group.totalExpenses)}</span>
+                    Total:{' '}
+                    <span className="font-medium text-gray-900">
+                      {formatCurrency(group.totalExpenses)}
+                    </span>
                   </div>
                 </div>
               </div>
               <div className="p-4 space-y-4">
-                {calculateBalances(expenses, group.members).map(({ member, paid, owes, netBalance }) => (
-                  <div key={member} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                    <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <span className="text-indigo-700 font-medium">
-                        {member[0].toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="font-medium text-gray-900 truncate">
-                          {member}
-                        </span>
-                        <span className={`font-medium ${
-                          netBalance >= 0 ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {formatCurrency(netBalance)}
+                {calculateBalances(expenses, group.members).map(
+                  ({ member, paid, owes, netBalance }) => (
+                    <div
+                      key={member}
+                      className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+                    >
+                      <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <span className="text-indigo-700 font-medium">
+                          {member[0].toUpperCase()}
                         </span>
                       </div>
-                      <div className="flex justify-between text-sm text-gray-600">
-                        <span>Paid {formatCurrency(paid)}</span>
-                        <span>•</span>
-                        <span>Owes {formatCurrency(owes)}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-medium text-gray-900 truncate">
+                            {member}
+                          </span>
+                          <span
+                            className={`font-medium ${
+                              netBalance >= 0
+                                ? 'text-green-600'
+                                : 'text-red-600'
+                            }`}
+                          >
+                            {formatCurrency(netBalance)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm text-gray-600">
+                          <span>Paid {formatCurrency(paid)}</span>
+                          <span>•</span>
+                          <span>Owes {formatCurrency(owes)}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                )}
 
-                {calculateBalances(expenses, group.members).some(b => b.netBalance !== 0) && (
+                {calculateBalances(expenses, group.members).some(
+                  (b) => b.netBalance !== 0
+                ) && (
                   <div className="mt-4 pt-4 border-t border-gray-200">
                     <h3 className="text-sm font-medium text-gray-900 mb-3">
                       Suggested Settlements
                     </h3>
                     <div className="space-y-2">
-                      {calculateSettlements(calculateBalances(expenses, group.members)).map((settlement, index) => (
-                        <div key={index} className="text-sm text-gray-600 flex items-center gap-2">
-                          <span className="font-medium text-gray-900">{settlement.from}</span>
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                      {calculateSettlements(
+                        calculateBalances(expenses, group.members)
+                      ).map((settlement, index) => (
+                        <div
+                          key={index}
+                          className="text-sm text-gray-600 flex items-center gap-2"
+                        >
+                          <span className="font-medium text-gray-900">
+                            {settlement.from}
+                          </span>
+                          <svg
+                            className="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M14 5l7 7m0 0l-7 7m7-7H3"
+                            />
                           </svg>
-                          <span className="font-medium text-gray-900">{settlement.to}</span>
+                          <span className="font-medium text-gray-900">
+                            {settlement.to}
+                          </span>
                           <span className="ml-auto font-medium text-gray-900">
                             {formatCurrency(settlement.amount)}
                           </span>
@@ -475,19 +582,40 @@ export default function GroupPage({ params }: { params: Promise<{ id: string }> 
             onCancel={() => setDeletingExpense(null)}
           />
         )}
+
+        {isSettling && group && (
+          <SettleExpenseModal
+            members={group.members}
+            onClose={() => setIsSettling(false)}
+            onSettle={handleSettle}
+            suggestedSettlements={calculateSettlements(
+              calculateBalances(expenses, group.members)
+            )}
+          />
+        )}
       </main>
     </div>
   );
 }
 
-function calculateSettlements(balances: MemberBalance[]): Array<{ from: string; to: string; amount: number }> {
+function calculateSettlements(
+  balances: MemberBalance[]
+): Array<{ from: string; to: string; amount: number }> {
   const settlements: Array<{ from: string; to: string; amount: number }> = [];
-  const debtors = balances.filter(b => b.netBalance < 0).sort((a, b) => a.netBalance - b.netBalance);
-  const creditors = balances.filter(b => b.netBalance > 0).sort((a, b) => b.netBalance - a.netBalance);
+  const debtors = balances
+    .filter((b) => b.netBalance < 0)
+    .sort((a, b) => a.netBalance - b.netBalance);
+  const creditors = balances
+    .filter((b) => b.netBalance > 0)
+    .sort((a, b) => b.netBalance - a.netBalance);
 
-  let i = 0, j = 0;
+  let i = 0,
+    j = 0;
   while (i < debtors.length && j < creditors.length) {
-    const amount = Math.min(Math.abs(debtors[i].netBalance), creditors[j].netBalance);
+    const amount = Math.min(
+      Math.abs(debtors[i].netBalance),
+      creditors[j].netBalance
+    );
     if (amount > 0) {
       settlements.push({
         from: debtors[i].member,
@@ -504,4 +632,4 @@ function calculateSettlements(balances: MemberBalance[]): Array<{ from: string; 
   }
 
   return settlements;
-} 
+}
