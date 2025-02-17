@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { DeleteConfirmationModal } from '@/app/components/DeleteConfirmationModal';
 
 interface Member {
   id: string;
@@ -223,46 +225,6 @@ function EditGroupModal({
   );
 }
 
-interface DeleteConfirmationModalProps {
-  groupName: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-}
-
-function DeleteConfirmationModal({
-  groupName,
-  onConfirm,
-  onCancel,
-}: DeleteConfirmationModalProps) {
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-xl">
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">
-          Delete Group
-        </h2>
-        <p className="text-gray-600 mb-6">
-          Are you sure you want to delete &quot;{groupName}&quot;? This action
-          cannot be undone.
-        </p>
-        <div className="flex justify-end gap-4">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition-colors font-medium"
-          >
-            Delete Group
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function GroupsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -392,10 +354,18 @@ export default function GroupsPage() {
               key={group.id}
               className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-all"
             >
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="text-xl font-semibold text-gray-900">
-                  {group.name}
-                </h3>
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-1">
+                    {group.name}
+                  </h3>
+                  <p className="text-gray-600">
+                    Total Expenses:{' '}
+                    <span className="font-medium text-gray-900">
+                      {formatCurrency(group.totalExpenses)}
+                    </span>
+                  </p>
+                </div>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setEditingGroup(group)}
@@ -439,15 +409,10 @@ export default function GroupsPage() {
                   </button>
                 </div>
               </div>
-              <div className="text-gray-700 space-y-2">
-                <p>
-                  Total Expenses:{' '}
-                  <span className="font-medium text-gray-900">
-                    {formatCurrency(group.totalExpenses)}
-                  </span>
-                </p>
+
+              <div className="space-y-4">
                 <div>
-                  <p className="mb-1 text-gray-700">Members:</p>
+                  <p className="text-sm text-gray-600 mb-2">Members:</p>
                   <div className="flex flex-wrap gap-2">
                     {group.members.map((member) => (
                       <span
@@ -459,6 +424,13 @@ export default function GroupsPage() {
                     ))}
                   </div>
                 </div>
+
+                <Link
+                  href={`/groups/${group.id}`}
+                  className="block w-full bg-indigo-50 text-indigo-700 px-4 py-2 rounded-md hover:bg-indigo-100 transition-colors text-center font-medium"
+                >
+                  View Details
+                </Link>
               </div>
             </div>
           ))}
@@ -485,7 +457,8 @@ export default function GroupsPage() {
 
         {deletingGroup && (
           <DeleteConfirmationModal
-            groupName={deletingGroup.name}
+            title="Delete Group"
+            message={`Are you sure you want to delete "${deletingGroup.name}"? This action cannot be undone.`}
             onConfirm={() => handleDeleteGroup(deletingGroup.id)}
             onCancel={() => setDeletingGroup(null)}
           />

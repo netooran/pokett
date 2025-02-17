@@ -11,6 +11,16 @@ interface Group {
   createdAt: Date;
 }
 
+interface Expense {
+  id: string;
+  groupId: string;
+  description: string;
+  amount: number;
+  paidBy: string;
+  splitBetween: string[];
+  createdAt: Date;
+}
+
 // In-memory data store
 class Store {
   private members: Member[] = [
@@ -36,6 +46,27 @@ class Store {
       totalExpenses: 3425.75,
       members: ['You', 'Alex', 'Chris'],
       createdAt: new Date('2024-02-01'),
+    },
+  ];
+
+  private expenses: Expense[] = [
+    {
+      id: '1',
+      groupId: '1',
+      description: 'Dinner',
+      amount: 2500,
+      paidBy: 'John',
+      splitBetween: ['John', 'Sarah', 'Mike', 'Anna'],
+      createdAt: new Date('2024-02-15'),
+    },
+    {
+      id: '2',
+      groupId: '1',
+      description: 'Taxi',
+      amount: 800,
+      paidBy: 'Sarah',
+      splitBetween: ['Sarah', 'Mike'],
+      createdAt: new Date('2024-02-16'),
     },
   ];
 
@@ -102,6 +133,89 @@ class Store {
       return true;
     }
     return false;
+  }
+
+  getGroup(id: string): Group | null {
+    return this.groups.find((g) => g.id === id) || null;
+  }
+
+  getGroupExpenses(groupId: string): Expense[] {
+    return this.expenses.filter((expense) => expense.groupId === groupId);
+  }
+
+  addExpense(
+    groupId: string,
+    description: string,
+    amount: number,
+    paidBy: string,
+    splitBetween: string[]
+  ): Expense {
+    const newExpense: Expense = {
+      id: Date.now().toString(),
+      groupId,
+      description,
+      amount,
+      paidBy,
+      splitBetween,
+      createdAt: new Date(),
+    };
+    this.expenses.push(newExpense);
+
+    // Update group total
+    const group = this.groups.find((g) => g.id === groupId);
+    if (group) {
+      group.totalExpenses += amount;
+    }
+
+    return newExpense;
+  }
+
+  updateExpense(
+    groupId: string,
+    expenseId: string,
+    description: string,
+    amount: number,
+    paidBy: string,
+    splitBetween: string[]
+  ): Expense | null {
+    const expense = this.expenses.find(
+      (e) => e.id === expenseId && e.groupId === groupId
+    );
+    if (!expense) return null;
+
+    // Update group total
+    const group = this.groups.find((g) => g.id === groupId);
+    if (group) {
+      group.totalExpenses = group.totalExpenses - expense.amount + amount;
+    }
+
+    // Update expense
+    expense.description = description;
+    expense.amount = amount;
+    expense.paidBy = paidBy;
+    expense.splitBetween = splitBetween;
+
+    return expense;
+  }
+
+  deleteExpense(groupId: string, expenseId: string): boolean {
+    const expense = this.expenses.find(
+      (e) => e.id === expenseId && e.groupId === groupId
+    );
+    if (!expense) return false;
+
+    // Update group total
+    const group = this.groups.find((g) => g.id === groupId);
+    if (group) {
+      group.totalExpenses -= expense.amount;
+    }
+
+    // Remove expense
+    this.expenses = this.expenses.filter(
+      (e) => !(e.id === expenseId && e.groupId === groupId)
+    );
+
+    return true;
   }
 }
 

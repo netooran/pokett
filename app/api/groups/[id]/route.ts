@@ -30,4 +30,18 @@ export async function DELETE(
   }
   
   return new NextResponse(null, { status: 204 });
+}
+
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+): Promise<NextResponse> {
+  const { id } = await context.params;
+  const group = store.getGroup(id);
+  
+  if (!group) {
+    return new NextResponse('Group not found', { status: 404 });
+  }
+  
+  return NextResponse.json(group);
 } 
