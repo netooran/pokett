@@ -110,6 +110,10 @@ const formatDate = (date: Date): string => {
   });
 };
 
+function isGroupFullySettled(balances: MemberBalance[]): boolean {
+  return balances.every((balance) => balance.netBalance === 0);
+}
+
 export default function GroupPage({
   params,
 }: {
@@ -158,6 +162,12 @@ export default function GroupPage({
 
     fetchData();
   }, [id]);
+
+  const balances = calculateBalances(expenses, group?.members || []);
+  const fullySettled = isGroupFullySettled(balances);
+  const hasPendingSettlements = balances.some(
+    (balance) => balance.netBalance !== 0
+  );
 
   const handleEditGroup = async (
     id: string,
@@ -578,6 +588,16 @@ export default function GroupPage({
                 </div>
               </div>
               <div className="p-4 space-y-4">
+                {fullySettled && (
+                  <div className="bg-green-100 text-green-800 p-2 rounded-md">
+                    This group is fully settled!
+                  </div>
+                )}
+                {hasPendingSettlements && !fullySettled && (
+                  <div className="bg-yellow-100 text-yellow-800 p-2 rounded-md">
+                    There are pending settlements.
+                  </div>
+                )}
                 {calculateBalances(expenses, group.members).map(
                   ({ member, paid, owes, netBalance }) => (
                     <div
