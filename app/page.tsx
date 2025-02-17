@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 export default function Home() {
   return (
     <div className="min-h-screen bg-white">
@@ -12,18 +14,18 @@ export default function Home() {
             awkward money talks.
           </p>
           <div className="flex justify-center gap-4 mt-8">
-            <a
+            <Link
               href="/signup"
               className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-700 hover:bg-indigo-800"
             >
               Get Started - It&apos;s Free
-            </a>
-            <a
+            </Link>
+            <Link
               href="/groups"
               className="inline-flex items-center px-6 py-3 border border-indigo-700 text-base font-medium rounded-md text-indigo-700 hover:bg-indigo-50"
             >
               View Groups
-            </a>
+            </Link>
           </div>
         </div>
 
