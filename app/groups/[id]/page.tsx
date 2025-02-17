@@ -15,6 +15,7 @@ interface Expense {
   splitBetween: string[];
   createdAt: Date;
   isSettlement?: boolean;
+  type: 'expense' | 'settlement';
 }
 
 interface Group {
@@ -183,9 +184,13 @@ export default function GroupPage({
     }
   };
 
-  const handleAddExpense = async (
-    expense: Omit<Expense, 'id' | 'createdAt'>
-  ) => {
+  const handleAddExpense = async (expense: {
+    description: string;
+    amount: number;
+    paidBy: string;
+    splitBetween: string[];
+    type: 'expense';
+  }) => {
     try {
       const response = await fetch(`/api/groups/${id}/expenses`, {
         method: 'POST',
@@ -216,6 +221,7 @@ export default function GroupPage({
     amount: number;
     paidBy: string;
     splitBetween: string[];
+    type: 'expense' | 'settlement';
   }) => {
     if (!editingExpense) return;
 
@@ -319,6 +325,7 @@ export default function GroupPage({
     to: string;
     amount: number;
     description?: string;
+    type: 'settlement';
   }) => {
     try {
       const response = await fetch(`/api/groups/${id}/expenses`, {
@@ -327,20 +334,20 @@ export default function GroupPage({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          description: settlement.description,
+          description:
+            settlement.description ||
+            `Settlement from ${settlement.from} to ${settlement.to}`,
           amount: settlement.amount,
           paidBy: settlement.from,
           splitBetween: [settlement.to],
-          isSettlement: true,
+          type: 'settlement',
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to record settlement');
-      }
+      if (!response.ok) throw new Error('Failed to save settlement');
 
-      const newExpense = await response.json();
-      setExpenses((prev) => [...prev, newExpense]);
+      const newSettlement = await response.json();
+      setExpenses((prev) => [newSettlement, ...prev]);
       setGroup((prev) =>
         prev
           ? { ...prev, totalExpenses: prev.totalExpenses + settlement.amount }
@@ -348,8 +355,8 @@ export default function GroupPage({
       );
       setIsSettling(false);
     } catch (error) {
-      console.error('Error recording settlement:', error);
-      alert('Failed to record settlement. Please try again.');
+      console.error('Error saving settlement:', error);
+      alert('Failed to save settlement. Please try again.');
     }
   };
 
@@ -433,13 +440,57 @@ export default function GroupPage({
                     .map((expense) => (
                       <div key={expense.id} className="px-6 py-4">
                         <div className="flex items-center gap-4">
+                          <div className="flex-shrink-0">
+                            {expense.type === 'settlement' ? (
+                              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                                <svg
+                                  className="w-5 h-5 text-green-600"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+                                  />
+                                </svg>
+                              </div>
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                                <svg
+                                  className="w-5 h-5 text-indigo-600"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                                  />
+                                </svg>
+                              </div>
+                            )}
+                          </div>
                           <div className="flex-1 min-w-0">
                             <h3 className="text-base font-medium text-gray-900 truncate">
                               {expense.description}
                             </h3>
                             <p className="mt-0.5 text-sm text-gray-500">
-                              Paid by {expense.paidBy} • Split between{' '}
-                              {expense.splitBetween.join(', ')}
+                              {expense.type === 'settlement' ? (
+                                <>
+                                  Payment by {expense.paidBy} to{' '}
+                                  {expense.splitBetween[0]}
+                                </>
+                              ) : (
+                                <>
+                                  Paid by {expense.paidBy} • Split between{' '}
+                                  {expense.splitBetween.join(', ')}
+                                </>
+                              )}
                             </p>
                           </div>
                           <div className="flex items-center gap-4 flex-shrink-0">
@@ -454,8 +505,17 @@ export default function GroupPage({
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => setEditingExpense(expense)}
-                                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-                                title="Edit expense"
+                                className={`text-gray-400 transition-colors p-1 ${
+                                  expense.type === 'settlement'
+                                    ? 'cursor-not-allowed opacity-50'
+                                    : 'hover:text-gray-600'
+                                }`}
+                                title={
+                                  expense.type === 'settlement'
+                                    ? 'Settlements cannot be edited'
+                                    : 'Edit expense'
+                                }
+                                disabled={expense.type === 'settlement'}
                               >
                                 <svg
                                   xmlns="http://www.w3.org/2000/svg"
@@ -475,7 +535,7 @@ export default function GroupPage({
                               <button
                                 onClick={() => setDeletingExpense(expense)}
                                 className="text-gray-400 hover:text-red-600 transition-colors p-1"
-                                title="Delete expense"
+                                title={`Delete ${expense.type}`}
                               >
                                 <svg
                                   xmlns="http://www.w3.org/2000/svg"
@@ -634,7 +694,6 @@ export default function GroupPage({
 
         {isSettling && group && (
           <SettleExpenseModal
-            members={group.members}
             onClose={() => setIsSettling(false)}
             onSettle={handleSettle}
             suggestedSettlements={calculateSettlements(

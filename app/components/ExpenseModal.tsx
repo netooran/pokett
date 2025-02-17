@@ -18,6 +18,7 @@ interface ExpenseModalProps {
     amount: number;
     paidBy: string;
     splitBetween: string[];
+    type: 'expense';
   }) => void;
   expense?: {
     id: string;
@@ -44,12 +45,14 @@ export function ExpenseModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (description && amount && paidBy && splitBetween.length > 0) {
-      onSubmit({
-        description: description.trim(),
+      const expenseData = {
+        description,
         amount: parseFloat(amount),
         paidBy,
         splitBetween,
-      });
+        type: 'expense' as const,
+      };
+      onSubmit(expenseData);
     }
   };
 

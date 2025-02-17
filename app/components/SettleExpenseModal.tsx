@@ -1,16 +1,22 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 interface SettleExpenseModalProps {
-  members: string[];
   onClose: () => void;
   onSettle: (settlement: {
     from: string;
     to: string;
     amount: number;
     description?: string;
+    type: 'settlement';
   }) => void;
+  existingSettlement?: {
+    from: string;
+    to: string;
+    amount: number;
+    description?: string;
+  };
   suggestedSettlements: Array<{
     from: string;
     to: string;
@@ -28,16 +34,25 @@ const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
-export function SettleExpenseModal({
-  members,
+export const SettleExpenseModal: React.FC<SettleExpenseModalProps> = ({
   onClose,
   onSettle,
-  suggestedSettlements,
-}: SettleExpenseModalProps) {
-  const [from, setFrom] = useState(members[0] || '');
-  const [to, setTo] = useState(members[1] || '');
-  const [amount, setAmount] = useState('');
-  const [description, setDescription] = useState('');
+  existingSettlement,
+  suggestedSettlements = [],
+}) => {
+  const [from, setFrom] = useState(existingSettlement?.from || '');
+  const [to, setTo] = useState(existingSettlement?.to || '');
+  const [amount, setAmount] = useState(existingSettlement?.amount || 0);
+  const [description, setDescription] = useState(existingSettlement?.description || '');
+
+  useEffect(() => {
+    if (existingSettlement) {
+      setFrom(existingSettlement.from);
+      setTo(existingSettlement.to);
+      setAmount(existingSettlement.amount);
+      setDescription(existingSettlement.description || '');
+    }
+  }, [existingSettlement]);
 
   // Get members who owe money (debtors)
   const debtors = useMemo(() => {
@@ -67,25 +82,28 @@ export function SettleExpenseModal({
         s => s.from === from && s.to === to
       );
       if (settlement) {
-        setAmount(settlement.amount.toString());
+        setAmount(settlement.amount);
       } else {
-        setAmount('');
+        setAmount(0);
       }
     } else {
-      setAmount('');
+      setAmount(0);
     }
   }, [from, to, suggestedSettlements]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const settlementAmount = parseFloat(amount);
-    if (settlementAmount > 0 && from !== to) {
+    if (amount > 0 && from !== to) {
       onSettle({
         from,
         to,
-        amount: settlementAmount,
-        description: description.trim() || `Settlement from ${from} to ${to}`,
+        amount,
+        description,
+        type: 'settlement',
       });
+      onClose();
+    } else {
+      alert('Please ensure all fields are filled correctly.');
     }
   };
 
@@ -93,7 +111,9 @@ export function SettleExpenseModal({
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-xl">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">Settle Amount</h2>
+          <h2 className="text-xl font-semibold text-gray-900">
+            {existingSettlement ? 'Edit Settlement' : 'Settle Amount'}
+          </h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -116,7 +136,7 @@ export function SettleExpenseModal({
                 }}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 focus:ring-2 focus:ring-indigo-600 focus:border-transparent"
               >
-                <option value="">Select member</option>
+                <option value="" disabled>Select payer</option>
                 {debtors.map(({ member }) => (
                   <option key={member} value={member}>
                     {member}
@@ -151,7 +171,7 @@ export function SettleExpenseModal({
                 className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 focus:ring-2 focus:ring-indigo-600 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500"
                 disabled={!from || validReceivers.length === 0}
               >
-                <option value="">
+                <option value="" disabled>
                   {!from 
                     ? "Select payer first"
                     : validReceivers.length === 0 
@@ -176,7 +196,7 @@ export function SettleExpenseModal({
               <input
                 type="number"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => setAmount(Number(e.target.value))}
                 className="w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-gray-900 focus:ring-2 focus:ring-indigo-600 focus:border-transparent"
                 step="0.01"
                 min="0"
@@ -187,7 +207,7 @@ export function SettleExpenseModal({
                 <div className="mt-2 text-sm text-gray-600">
                   {from} owes {to}{' '}
                   <span className="font-medium text-gray-900">
-                    {formatCurrency(parseFloat(amount) || 0)}
+                    {formatCurrency(amount)}
                   </span>
                 </div>
               )}
@@ -218,13 +238,13 @@ export function SettleExpenseModal({
             <button
               type="submit"
               className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={!from || !to || !amount || parseFloat(amount) <= 0}
+              disabled={!from || !to || !amount || amount <= 0}
             >
-              Confirm Settlement
+              {existingSettlement ? 'Update Settlement' : 'Settle'}
             </button>
           </div>
         </form>
       </div>
     </div>
   );
-} 
+}; 

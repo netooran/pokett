@@ -19,6 +19,7 @@ interface Expense {
   paidBy: string;
   splitBetween: string[];
   createdAt: Date;
+  type: 'expense' | 'settlement';
 }
 
 // In-memory data store
@@ -58,6 +59,7 @@ class Store {
       paidBy: 'John',
       splitBetween: ['John', 'Sarah', 'Mike', 'Anna'],
       createdAt: new Date('2024-02-15'),
+      type: 'expense',
     },
     {
       id: '2',
@@ -67,6 +69,17 @@ class Store {
       paidBy: 'Sarah',
       splitBetween: ['Sarah', 'Mike'],
       createdAt: new Date('2024-02-16'),
+      type: 'expense',
+    },
+    {
+      id: '3',
+      groupId: '1',
+      description: 'Settlement from Mike to John',
+      amount: 500,
+      paidBy: 'Mike',
+      splitBetween: ['John'],
+      createdAt: new Date('2024-02-17'),
+      type: 'settlement',
     },
   ];
 
@@ -165,7 +178,8 @@ class Store {
     description: string,
     amount: number,
     paidBy: string,
-    splitBetween: string[]
+    splitBetween: string[],
+    type: 'expense' | 'settlement' = 'expense'
   ): Expense {
     const newExpense: Expense = {
       id: Date.now().toString(),
@@ -175,6 +189,7 @@ class Store {
       paidBy,
       splitBetween,
       createdAt: new Date(),
+      type,
     };
     this.expenses.push(newExpense);
 
@@ -240,7 +255,8 @@ class Store {
     const groupExpenses = this.getGroupExpenses(groupId);
     return groupExpenses.some(
       (expense) =>
-        expense.paidBy === memberName || expense.splitBetween.includes(memberName)
+        expense.paidBy === memberName ||
+        expense.splitBetween.includes(memberName)
     );
   }
 }
