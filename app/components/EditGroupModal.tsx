@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { store } from '../lib/store';
 
 interface Member {
   id: string;

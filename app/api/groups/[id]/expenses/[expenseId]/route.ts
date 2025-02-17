@@ -28,7 +28,7 @@ export async function PATCH(
 
     // Validate that all split members are group members
     const invalidMembers = splitBetween.filter(
-      member => !group.members.includes(member)
+      (member: string) => !group.members.includes(member)
     );
     if (invalidMembers.length > 0) {
       return NextResponse.json(
