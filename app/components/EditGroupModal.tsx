@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { store } from '../lib/store';
 
 interface Member {
   id: string;
@@ -12,6 +13,16 @@ interface Group {
   name: string;
   totalExpenses: number;
   members: string[];
+  createdAt: Date;
+}
+
+interface Expense {
+  id: string;
+  groupId: string;
+  description: string;
+  amount: number;
+  paidBy: string;
+  splitBetween: string[];
   createdAt: Date;
 }
 
@@ -35,6 +46,42 @@ export function EditGroupModal({
   const [newMember, setNewMember] = useState('');
   const [suggestions, setSuggestions] = useState<Member[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [memberError, setMemberError] = useState<string | null>(null);
+  const [memberExpenses, setMemberExpenses] = useState<Record<string, boolean>>(
+    {}
+  );
+  const [isCheckingExpenses, setIsCheckingExpenses] = useState(true);
+
+  // Fetch latest expense data when component mounts or members change
+  useEffect(() => {
+    const checkMemberExpenses = async () => {
+      setIsCheckingExpenses(true);
+      try {
+        const response = await fetch(`/api/groups/${group.id}/expenses`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch expenses');
+        }
+
+        const expenses: Expense[] = await response.json();
+        const expenseMap: Record<string, boolean> = {};
+
+        members.forEach((member) => {
+          expenseMap[member] = expenses.some(
+            (expense) =>
+              expense.paidBy === member || expense.splitBetween.includes(member)
+          );
+        });
+
+        setMemberExpenses(expenseMap);
+      } catch (error) {
+        console.error('Error checking member expenses:', error);
+      } finally {
+        setIsCheckingExpenses(false);
+      }
+    };
+
+    checkMemberExpenses();
+  }, [group.id, members]);
 
   const handleMemberInputChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -88,8 +135,33 @@ export function EditGroupModal({
     }
   };
 
-  const handleRemoveMember = (memberToRemove: string): void => {
-    setMembers(members.filter((member) => member !== memberToRemove));
+  const handleRemoveMember = async (memberToRemove: string) => {
+    try {
+      const response = await fetch(`/api/groups/${group.id}/expenses`);
+      if (!response.ok) {
+        throw new Error('Failed to check member expenses');
+      }
+
+      const expenses: Expense[] = await response.json();
+      const isInExpenses = expenses.some(
+        (expense) =>
+          expense.paidBy === memberToRemove ||
+          expense.splitBetween.includes(memberToRemove)
+      );
+
+      if (isInExpenses) {
+        setMemberError(
+          `Cannot remove ${memberToRemove} as they are part of one or more expenses. Remove them from all expenses first.`
+        );
+        return;
+      }
+
+      setMembers((prev) => prev.filter((m) => m !== memberToRemove));
+      setMemberError(null);
+    } catch (error) {
+      console.error('Error removing member:', error);
+      setMemberError('Failed to remove member');
+    }
   };
 
   const handleSubmit = (e: React.FormEvent): void => {
@@ -125,18 +197,35 @@ export function EditGroupModal({
             <label className="block text-sm font-medium text-gray-900 mb-1">
               Members
             </label>
+            {memberError && (
+              <p className="text-sm text-red-600 mb-2">{memberError}</p>
+            )}
             {members.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-3">
                 {members.map((member) => (
                   <span
                     key={member}
-                    className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md text-sm flex items-center gap-1 font-medium"
+                    className={`bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md text-sm flex items-center gap-1 font-medium ${
+                      memberExpenses[member] ? 'opacity-75' : ''
+                    }`}
                   >
                     {member}
                     <button
                       type="button"
                       onClick={() => handleRemoveMember(member)}
-                      className="text-indigo-500 hover:text-indigo-700 transition-colors"
+                      className={`text-indigo-500 hover:text-indigo-700 transition-colors ${
+                        memberExpenses[member] || isCheckingExpenses
+                          ? 'cursor-not-allowed'
+                          : ''
+                      }`}
+                      disabled={memberExpenses[member] || isCheckingExpenses}
+                      title={
+                        isCheckingExpenses
+                          ? 'Checking member expenses...'
+                          : memberExpenses[member]
+                          ? 'Cannot remove member with expenses'
+                          : 'Remove member'
+                      }
                     >
                       ×
                     </button>
@@ -214,4 +303,4 @@ export function EditGroupModal({
       </div>
     </div>
   );
-} 
+}

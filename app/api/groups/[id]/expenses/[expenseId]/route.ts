@@ -5,23 +5,62 @@ export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string; expenseId: string }> }
 ): Promise<NextResponse> {
-  const { id, expenseId } = await context.params;
-  const { description, amount, paidBy, splitBetween } = await request.json();
-  
-  const updatedExpense = store.updateExpense(
-    id,
-    expenseId,
-    description,
-    amount,
-    paidBy,
-    splitBetween
-  );
-  
-  if (!updatedExpense) {
-    return new NextResponse('Expense not found', { status: 404 });
+  try {
+    const { id, expenseId } = await context.params;
+    const { description, amount, paidBy, splitBetween } = await request.json();
+
+    // Get the group first to validate members
+    const group = store.getGroup(id);
+    if (!group) {
+      return NextResponse.json(
+        { error: 'Group not found' },
+        { status: 404 }
+      );
+    }
+
+    // Validate that paidBy is a member
+    if (!group.members.includes(paidBy)) {
+      return NextResponse.json(
+        { error: 'Payer must be a member of the group' },
+        { status: 400 }
+      );
+    }
+
+    // Validate that all split members are group members
+    const invalidMembers = splitBetween.filter(
+      member => !group.members.includes(member)
+    );
+    if (invalidMembers.length > 0) {
+      return NextResponse.json(
+        { error: `Invalid members in split: ${invalidMembers.join(', ')}` },
+        { status: 400 }
+      );
+    }
+    
+    const updatedExpense = store.updateExpense(
+      id,
+      expenseId,
+      description,
+      amount,
+      paidBy,
+      splitBetween
+    );
+    
+    if (!updatedExpense) {
+      return NextResponse.json(
+        { error: 'Expense not found' },
+        { status: 404 }
+      );
+    }
+    
+    return NextResponse.json(updatedExpense);
+  } catch (error) {
+    console.error('Error updating expense:', error);
+    return NextResponse.json(
+      { error: 'Failed to update expense' },
+      { status: 500 }
+    );
   }
-  
-  return NextResponse.json(updatedExpense);
 }
 
 export async function DELETE(

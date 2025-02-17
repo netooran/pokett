@@ -213,6 +213,19 @@ export default function GroupPage({ params }: { params: Promise<{ id: string }> 
     if (!editingExpense) return;
 
     try {
+      // First validate that paidBy is still a member
+      if (!group?.members.includes(expenseData.paidBy)) {
+        throw new Error('Payer must be a member of the group');
+      }
+
+      // Validate that all split members are group members
+      const invalidMembers = expenseData.splitBetween.filter(
+        member => !group?.members.includes(member)
+      );
+      if (invalidMembers.length > 0) {
+        throw new Error(`Invalid members in split: ${invalidMembers.join(', ')}`);
+      }
+
       const response = await fetch(`/api/groups/${id}/expenses/${editingExpense.id}`, {
         method: 'PATCH',
         headers: {
@@ -222,7 +235,10 @@ export default function GroupPage({ params }: { params: Promise<{ id: string }> 
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update expense');
+        const errorData = await response.json().catch(() => null);
+        throw new Error(
+          errorData?.error || 'Failed to update expense'
+        );
       }
 
       const updatedExpense = await response.json();
@@ -244,6 +260,7 @@ export default function GroupPage({ params }: { params: Promise<{ id: string }> 
       setEditingExpense(null);
     } catch (error) {
       console.error('Error updating expense:', error);
+      alert(error instanceof Error ? error.message : 'Failed to update expense');
       setEditingExpense(null);
     }
   };

@@ -114,15 +114,32 @@ class Store {
   // Add edit method
   editGroup(id: string, name: string, members: string[]): Group | null {
     const group = this.groups.find((g) => g.id === id);
-    if (group) {
-      group.name = name;
-      group.members = members;
-      return {
-        ...group,
-        members: [...members], // Ensure we return a new array
-      };
+    if (!group) return null;
+
+    // Check which members are being removed
+    const removedMembers = group.members.filter(
+      (member) => !members.includes(member)
+    );
+
+    // Check if any removed member is part of expenses
+    const membersInExpenses = removedMembers.filter((member) =>
+      this.isMemberInGroupExpenses(id, member)
+    );
+
+    if (membersInExpenses.length > 0) {
+      throw new Error(
+        `Cannot remove members that are part of expenses: ${membersInExpenses.join(
+          ', '
+        )}`
+      );
     }
-    return null;
+
+    group.name = name;
+    group.members = members;
+    return {
+      ...group,
+      members: [...members],
+    };
   }
 
   // Add delete method
@@ -216,6 +233,15 @@ class Store {
     );
 
     return true;
+  }
+
+  // Add this method to check if a member is part of any expenses in a group
+  isMemberInGroupExpenses(groupId: string, memberName: string): boolean {
+    const groupExpenses = this.getGroupExpenses(groupId);
+    return groupExpenses.some(
+      (expense) =>
+        expense.paidBy === memberName || expense.splitBetween.includes(memberName)
+    );
   }
 }
 
