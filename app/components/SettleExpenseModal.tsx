@@ -34,8 +34,8 @@ export function SettleExpenseModal({
   onSettle,
   suggestedSettlements,
 }: SettleExpenseModalProps) {
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  const [from, setFrom] = useState(members[0] || '');
+  const [to, setTo] = useState(members[1] || '');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
 

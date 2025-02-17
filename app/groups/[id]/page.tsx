@@ -14,6 +14,7 @@ interface Expense {
   paidBy: string;
   splitBetween: string[];
   createdAt: Date;
+  isSettlement?: boolean;
 }
 
 interface Group {
@@ -71,6 +72,43 @@ const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
+// Add this helper function near the top with other utility functions
+const formatDate = (date: Date): string => {
+  const now = new Date();
+  const expenseDate = new Date(date);
+
+  // If it's today, show time
+  if (expenseDate.toDateString() === now.toDateString()) {
+    return `Today, ${expenseDate.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    })}`;
+  }
+
+  // If it's yesterday
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (expenseDate.toDateString() === yesterday.toDateString()) {
+    return 'Yesterday';
+  }
+
+  // If it's within this year, show date without year
+  if (expenseDate.getFullYear() === now.getFullYear()) {
+    return expenseDate.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+
+  // Otherwise show full date
+  return expenseDate.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
 export default function GroupPage({
   params,
 }: {
@@ -103,7 +141,12 @@ export default function GroupPage({
         ]);
 
         setGroup(groupData);
-        setExpenses(expensesData);
+        setExpenses(
+          expensesData.sort(
+            (a: Expense, b: Expense) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          )
+        );
         setAllMembers(membersData);
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -140,12 +183,9 @@ export default function GroupPage({
     }
   };
 
-  const handleAddExpense = async (expense: {
-    description: string;
-    amount: number;
-    paidBy: string;
-    splitBetween: string[];
-  }) => {
+  const handleAddExpense = async (
+    expense: Omit<Expense, 'id' | 'createdAt'>
+  ) => {
     try {
       const response = await fetch(`/api/groups/${id}/expenses`, {
         method: 'POST',
@@ -155,12 +195,10 @@ export default function GroupPage({
         body: JSON.stringify(expense),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to add expense');
-      }
+      if (!response.ok) throw new Error('Failed to add expense');
 
       const newExpense = await response.json();
-      setExpenses((prev) => [...prev, newExpense]);
+      setExpenses((prev) => [newExpense, ...prev]);
       setGroup((prev) =>
         prev
           ? { ...prev, totalExpenses: prev.totalExpenses + expense.amount }
@@ -169,7 +207,7 @@ export default function GroupPage({
       setIsAddingExpense(false);
     } catch (error) {
       console.error('Error adding expense:', error);
-      setIsAddingExpense(false);
+      alert('Failed to add expense. Please try again.');
     }
   };
 
@@ -386,68 +424,79 @@ export default function GroupPage({
                     No expenses yet. Add one to get started!
                   </div>
                 ) : (
-                  expenses.map((expense) => (
-                    <div key={expense.id} className="px-6 py-4">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="text-lg font-medium text-gray-900">
-                            {expense.description}
-                          </h3>
-                          <p className="text-sm text-gray-500">
-                            Paid by {expense.paidBy} • Split between{' '}
-                            {expense.splitBetween.join(', ')}
-                          </p>
-                        </div>
+                  expenses
+                    .sort(
+                      (a: Expense, b: Expense) =>
+                        new Date(b.createdAt).getTime() -
+                        new Date(a.createdAt).getTime()
+                    )
+                    .map((expense) => (
+                      <div key={expense.id} className="px-6 py-4">
                         <div className="flex items-center gap-4">
-                          <div className="text-lg font-medium text-gray-900">
-                            {formatCurrency(expense.amount)}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-base font-medium text-gray-900 truncate">
+                              {expense.description}
+                            </h3>
+                            <p className="mt-0.5 text-sm text-gray-500">
+                              Paid by {expense.paidBy} • Split between{' '}
+                              {expense.splitBetween.join(', ')}
+                            </p>
                           </div>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => setEditingExpense(expense)}
-                              className="text-gray-400 hover:text-gray-600 transition-colors"
-                              title="Edit expense"
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth={1.5}
-                                stroke="currentColor"
-                                className="w-5 h-5"
+                          <div className="flex items-center gap-4 flex-shrink-0">
+                            <div className="flex items-baseline gap-3">
+                              <span className="text-sm text-gray-500 whitespace-nowrap">
+                                {formatDate(expense.createdAt)}
+                              </span>
+                              <div className="text-base font-medium text-gray-900 whitespace-nowrap">
+                                {formatCurrency(expense.amount)}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => setEditingExpense(expense)}
+                                className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                                title="Edit expense"
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"
-                                />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => setDeletingExpense(expense)}
-                              className="text-gray-400 hover:text-red-600 transition-colors"
-                              title="Delete expense"
-                            >
-                              <svg
-                                xmlns="http://www.w3.org/2000/svg"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth={1.5}
-                                stroke="currentColor"
-                                className="w-5 h-5"
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  strokeWidth={1.5}
+                                  stroke="currentColor"
+                                  className="w-5 h-5"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125"
+                                  />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={() => setDeletingExpense(expense)}
+                                className="text-gray-400 hover:text-red-600 transition-colors p-1"
+                                title="Delete expense"
                               >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
-                                />
-                              </svg>
-                            </button>
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  strokeWidth={1.5}
+                                  stroke="currentColor"
+                                  className="w-5 h-5"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"
+                                  />
+                                </svg>
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))
+                    ))
                 )}
               </div>
             </div>
