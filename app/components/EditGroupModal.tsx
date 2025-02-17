@@ -1,29 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-
-interface Member {
-  id: string;
-  name: string;
-}
-
-interface Group {
-  id: string;
-  name: string;
-  totalExpenses: number;
-  members: string[];
-  createdAt: Date;
-}
-
-interface Expense {
-  id: string;
-  groupId: string;
-  description: string;
-  amount: number;
-  paidBy: string;
-  splitBetween: string[];
-  createdAt: Date;
-}
+import { Member, Group, Expense } from '@/types/models';
 
 interface EditGroupModalProps {
   group: Group;

@@ -1,14 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-
-interface Group {
-  id: string;
-  name: string;
-  totalExpenses: number;
-  members: string[];
-  createdAt: Date;
-}
+import { Group } from '@/types/models';
 
 interface ExpenseModalProps {
   group: Group;
@@ -28,15 +21,17 @@ interface ExpenseModalProps {
   };
 }
 
-export function ExpenseModal({ 
-  group, 
-  onClose, 
+export function ExpenseModal({
+  group,
+  onClose,
   onSubmit,
-  expense 
+  expense,
 }: ExpenseModalProps) {
   const [description, setDescription] = useState(expense?.description || '');
   const [amount, setAmount] = useState(expense?.amount.toString() || '');
-  const [paidBy, setPaidBy] = useState(expense?.paidBy || group.members[0] || '');
+  const [paidBy, setPaidBy] = useState(
+    expense?.paidBy || group.members[0] || ''
+  );
   const [splitBetween, setSplitBetween] = useState<string[]>(
     expense?.splitBetween || group.members
   );
@@ -169,4 +164,4 @@ export function ExpenseModal({
       </div>
     </div>
   );
-} 
+}

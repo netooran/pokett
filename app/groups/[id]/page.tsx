@@ -6,37 +6,7 @@ import { EditGroupModal } from '@/app/components/EditGroupModal';
 import { ExpenseModal } from '@/app/components/ExpenseModal';
 import { DeleteConfirmationModal } from '@/app/components/DeleteConfirmationModal';
 import { SettleExpenseModal } from '@/app/components/SettleExpenseModal';
-
-interface Expense {
-  id: string;
-  description: string;
-  amount: number;
-  paidBy: string;
-  splitBetween: string[];
-  createdAt: Date;
-  isSettlement?: boolean;
-  type: 'expense' | 'settlement';
-}
-
-interface Group {
-  id: string;
-  name: string;
-  totalExpenses: number;
-  members: string[];
-  createdAt: Date;
-}
-
-interface MemberBalance {
-  member: string;
-  paid: number;
-  owes: number;
-  netBalance: number;
-}
-
-interface Member {
-  id: string;
-  name: string;
-}
+import { Group, Member, Expense, MemberBalance } from '@/types/models';
 
 function calculateBalances(
   expenses: Expense[],

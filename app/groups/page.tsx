@@ -4,18 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { DeleteConfirmationModal } from '@/app/components/DeleteConfirmationModal';
 
-interface Member {
-  id: string;
-  name: string;
-}
-
-interface Group {
-  id: string;
-  name: string;
-  totalExpenses: number;
-  members: string[];
-  createdAt: Date;
-}
+import { Member, Group } from '@/types/models';
 
 // Add a utility function for formatting currency
 const formatCurrency = (amount: number): string => {
