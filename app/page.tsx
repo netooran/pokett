@@ -1,4 +1,13 @@
+'use client';
+
+import { useEffect } from 'react';
+import { registerServiceWorker } from './pwa';
+
 export default function Home() {
+  useEffect(() => {
+    registerServiceWorker();
+  }, []);
+
   return (
     <div className="min-h-screen bg-white">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
