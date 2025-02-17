@@ -1,0 +1,13 @@
+import { NextResponse } from 'next/server';
+import { store } from '@/app/lib/store';
+
+export async function GET() {
+  const members = store.getAllMembers();
+  return NextResponse.json(members);
+}
+
+export async function POST(request: Request) {
+  const { name } = await request.json();
+  const newMember = store.addMember(name);
+  return NextResponse.json(newMember);
+} 

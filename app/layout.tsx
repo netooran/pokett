@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import Link from 'next/link';
 import './globals.css';
+import PWARegistration from './components/PWARegistration';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -56,12 +58,13 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <PWARegistration />
         <header className="bg-white shadow">
           <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
             <h1 className="text-3xl font-bold text-gray-900">
-              <a href="#" className="text-indigo-600 hover:text-indigo-700">
+              <Link href="/" className="text-indigo-600 hover:text-indigo-700">
                 <span className="font-mono">Pokett</span>
-              </a>
+              </Link>
             </h1>
           </div>
         </header>
