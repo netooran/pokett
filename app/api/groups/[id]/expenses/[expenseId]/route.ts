@@ -10,7 +10,7 @@ export async function PATCH(
     const { description, amount, paidBy, splitBetween } = await request.json();
 
     // Get the group first to validate members
-    const group = store.getGroup(id);
+    const group = await store.getGroup(id);
     if (!group) {
       return NextResponse.json(
         { error: 'Group not found' },
@@ -37,7 +37,7 @@ export async function PATCH(
       );
     }
     
-    const updatedExpense = store.updateExpense(
+    const updatedExpense = await store.updateExpense(
       id,
       expenseId,
       description,
@@ -75,7 +75,7 @@ export async function DELETE(
       return new NextResponse('Missing required parameters', { status: 400 });
     }
 
-    const deleted = store.deleteExpense(id, expenseId);
+    const deleted = await store.deleteExpense(id, expenseId);
     
     if (!deleted) {
       return new NextResponse('Expense not found', { status: 404 });

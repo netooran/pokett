@@ -6,7 +6,7 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const { id } = await context.params;
-  const expenses = store.getGroupExpenses(id);
+  const expenses = await store.getGroupExpenses(id);
 
   if (!expenses) {
     return new NextResponse('Group not found', { status: 404 });
@@ -22,7 +22,7 @@ export async function POST(
   const { id } = await context.params;
   const { description, amount, paidBy, splitBetween, type } = await request.json();
 
-  const newExpense = store.addExpense(
+  const newExpense = await store.addExpense(
     id,
     description,
     amount,

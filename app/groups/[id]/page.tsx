@@ -108,6 +108,8 @@ export default function GroupPage({
         body: JSON.stringify({ name, members }),
       });
 
+      console.log('==>', response);
+
       if (!response.ok) throw new Error('Failed to update group');
 
       const updatedGroup = await response.json();

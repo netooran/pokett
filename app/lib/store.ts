@@ -1,86 +1,33 @@
 import { Group, Member, Expense } from '@/types/models';
+import { connectToDatabase } from './mongodb';
 
-// In-memory data store
 class Store {
-  private members: Member[] = [
-    { id: '1', name: 'John' },
-    { id: '2', name: 'Sarah' },
-    { id: '3', name: 'Mike' },
-    { id: '4', name: 'Anna' },
-    { id: '5', name: 'Alex' },
-    { id: '6', name: 'Chris' },
-  ];
-
-  private groups: Group[] = [
-    {
-      id: '1',
-      name: 'Weekend Trip',
-      totalExpenses: 1250.5,
-      members: ['John', 'Sarah', 'Mike', 'Anna'],
-      createdAt: new Date('2024-01-15'),
-    },
-    {
-      id: '2',
-      name: 'Roommates',
-      totalExpenses: 3425.75,
-      members: ['You', 'Alex', 'Chris'],
-      createdAt: new Date('2024-02-01'),
-    },
-  ];
-
-  private expenses: Expense[] = [
-    {
-      id: '1',
-      groupId: '1',
-      description: 'Dinner',
-      amount: 2500,
-      paidBy: 'John',
-      splitBetween: ['John', 'Sarah', 'Mike', 'Anna'],
-      createdAt: new Date('2024-02-15'),
-      type: 'expense',
-    },
-    {
-      id: '2',
-      groupId: '1',
-      description: 'Taxi',
-      amount: 800,
-      paidBy: 'Sarah',
-      splitBetween: ['Sarah', 'Mike'],
-      createdAt: new Date('2024-02-16'),
-      type: 'expense',
-    },
-    {
-      id: '3',
-      groupId: '1',
-      description: 'Settlement from Mike to John',
-      amount: 500,
-      paidBy: 'Mike',
-      splitBetween: ['John'],
-      createdAt: new Date('2024-02-17'),
-      type: 'settlement',
-    },
-  ];
-
   // Member methods
-  getAllMembers(): Member[] {
-    return this.members;
+  async getAllMembers(): Promise<Member[]> {
+    const { db } = await connectToDatabase();
+    const members = await db.collection('members').find({}).toArray();
+    return members;
   }
 
-  addMember(name: string): Member {
+  async addMember(name: string): Promise<Member> {
+    const { db } = await connectToDatabase();
     const newMember: Member = {
       id: Date.now().toString(),
       name,
     };
-    this.members.push(newMember);
+    await db.collection('members').insertOne(newMember);
     return newMember;
   }
 
   // Group methods
-  getAllGroups(): Group[] {
-    return this.groups;
+  async getAllGroups(): Promise<Group[]> {
+    const { db } = await connectToDatabase();
+    const groups = await db.collection('groups').find({}).toArray();
+    return groups;
   }
 
-  addGroup(name: string, members: string[]): Group {
+  async addGroup(name: string, members: string[]): Promise<Group> {
+    const { db } = await connectToDatabase();
     const newGroup: Group = {
       id: Date.now().toString(),
       name,
@@ -88,23 +35,37 @@ class Store {
       members,
       createdAt: new Date(),
     };
-    this.groups.push(newGroup);
+    await db.collection('groups').insertOne(newGroup);
     return newGroup;
   }
 
   // Add edit method
-  editGroup(id: string, name: string, members: string[]): Group | null {
-    const group = this.groups.find((g) => g.id === id);
+  async editGroup(
+    id: string,
+    name: string,
+    members: string[]
+  ): Promise<Group | null> {
+    const { db } = await connectToDatabase();
+    const group = await db.collection('groups').findOne({ id });
     if (!group) return null;
 
     // Check which members are being removed
     const removedMembers = group.members.filter(
-      (member) => !members.includes(member)
+      (member: string) => !members.includes(member)
     );
 
+    // Get all expenses for this group
+    const expenses = await db
+      .collection('expenses')
+      .find({ groupId: id })
+      .toArray();
+
     // Check if any removed member is part of expenses
-    const membersInExpenses = removedMembers.filter((member) =>
-      this.isMemberInGroupExpenses(id, member)
+    const membersInExpenses = removedMembers.filter((member: string) =>
+      expenses.some(
+        (expense: Expense) =>
+          expense.paidBy === member || expense.splitBetween.includes(member)
+      )
     );
 
     if (membersInExpenses.length > 0) {
@@ -115,40 +76,44 @@ class Store {
       );
     }
 
-    group.name = name;
-    group.members = members;
-    return {
-      ...group,
-      members: [...members],
-    };
+    const updatedGroup = await db
+      .collection('groups')
+      .findOneAndUpdate(
+        { id },
+        { $set: { name, members } },
+        { returnDocument: 'after' }
+      );
+
+    return updatedGroup;
   }
 
   // Add delete method
-  deleteGroup(id: string): boolean {
-    const index = this.groups.findIndex((g) => g.id === id);
-    if (index !== -1) {
-      this.groups.splice(index, 1);
-      return true;
-    }
-    return false;
+  async deleteGroup(id: string): Promise<boolean> {
+    const { db } = await connectToDatabase();
+    const result = await db.collection('groups').deleteOne({ id });
+    return result.deletedCount > 0;
   }
 
-  getGroup(id: string): Group | null {
-    return this.groups.find((g) => g.id === id) || null;
+  async getGroup(id: string): Promise<Group | null> {
+    const { db } = await connectToDatabase();
+    return (await db.collection('groups').findOne({ id })) || null;
   }
 
-  getGroupExpenses(groupId: string): Expense[] {
-    return this.expenses.filter((expense) => expense.groupId === groupId);
+  async getGroupExpenses(groupId: string): Promise<Expense[]> {
+    const { db } = await connectToDatabase();
+    return await db.collection('expenses').find({ groupId }).toArray();
   }
 
-  addExpense(
+  async addExpense(
     groupId: string,
     description: string,
     amount: number,
     paidBy: string,
     splitBetween: string[],
     type: 'expense' | 'settlement' = 'expense'
-  ): Expense {
+  ): Promise<Expense> {
+    const { db } = await connectToDatabase();
+
     const newExpense: Expense = {
       id: Date.now().toString(),
       groupId,
@@ -159,73 +124,101 @@ class Store {
       createdAt: new Date(),
       type,
     };
-    this.expenses.push(newExpense);
+
+    await db.collection('expenses').insertOne(newExpense);
 
     // Update group total
-    const group = this.groups.find((g) => g.id === groupId);
-    if (group) {
-      group.totalExpenses += amount;
-    }
+    await db
+      .collection('groups')
+      .updateOne({ id: groupId }, { $inc: { totalExpenses: amount } });
 
     return newExpense;
   }
 
-  updateExpense(
+  async updateExpense(
     groupId: string,
     expenseId: string,
     description: string,
     amount: number,
     paidBy: string,
     splitBetween: string[]
-  ): Expense | null {
-    const expense = this.expenses.find(
-      (e) => e.id === expenseId && e.groupId === groupId
-    );
+  ): Promise<Expense | null> {
+    const { db } = await connectToDatabase();
+
+    // Find existing expense
+    const expense = await db.collection('expenses').findOne({
+      id: expenseId,
+      groupId: groupId,
+    });
     if (!expense) return null;
 
-    // Update group total
-    const group = this.groups.find((g) => g.id === groupId);
-    if (group) {
-      group.totalExpenses = group.totalExpenses - expense.amount + amount;
-    }
-
     // Update expense
-    expense.description = description;
-    expense.amount = amount;
-    expense.paidBy = paidBy;
-    expense.splitBetween = splitBetween;
+    await db.collection('expenses').updateOne(
+      { id: expenseId, groupId: groupId },
+      {
+        $set: {
+          description,
+          amount,
+          paidBy,
+          splitBetween,
+        },
+      }
+    );
 
-    return expense;
+    // Update group total
+    await db
+      .collection('groups')
+      .updateOne(
+        { id: groupId },
+        { $inc: { totalExpenses: amount - expense.amount } }
+      );
+
+    return {
+      ...expense,
+      description,
+      amount,
+      paidBy,
+      splitBetween,
+    };
   }
 
-  deleteExpense(groupId: string, expenseId: string): boolean {
-    const expense = this.expenses.find(
-      (e) => e.id === expenseId && e.groupId === groupId
-    );
+  async deleteExpense(groupId: string, expenseId: string): Promise<boolean> {
+    const { db } = await connectToDatabase();
+
+    // Find existing expense
+    const expense = await db.collection('expenses').findOne({
+      id: expenseId,
+      groupId: groupId,
+    });
     if (!expense) return false;
 
-    // Update group total
-    const group = this.groups.find((g) => g.id === groupId);
-    if (group) {
-      group.totalExpenses -= expense.amount;
-    }
-
     // Remove expense
-    this.expenses = this.expenses.filter(
-      (e) => !(e.id === expenseId && e.groupId === groupId)
-    );
+    await db.collection('expenses').deleteOne({
+      id: expenseId,
+      groupId: groupId,
+    });
+
+    // Update group total
+    await db
+      .collection('groups')
+      .updateOne({ id: groupId }, { $inc: { totalExpenses: -expense.amount } });
 
     return true;
   }
 
   // Add this method to check if a member is part of any expenses in a group
-  isMemberInGroupExpenses(groupId: string, memberName: string): boolean {
-    const groupExpenses = this.getGroupExpenses(groupId);
-    return groupExpenses.some(
-      (expense) =>
-        expense.paidBy === memberName ||
-        expense.splitBetween.includes(memberName)
-    );
+  async isMemberInGroupExpenses(
+    groupId: string,
+    memberName: string
+  ): Promise<boolean> {
+    const { db } = await connectToDatabase();
+
+    const expense = await db.collection('expenses').findOne({
+      groupId,
+      $or: [{ paidBy: memberName }, { splitBetween: memberName }],
+    });
+
+    return expense !== null;
   }
 }
 

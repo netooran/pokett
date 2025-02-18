@@ -521,6 +521,7 @@ function CreateGroupModal({
 
     if (value.trim()) {
       // Only filter out members already in this group
+      console.log(JSON.stringify(allMembers));
       const matchedSuggestions = allMembers
         .filter(
           (member) =>

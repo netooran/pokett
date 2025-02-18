@@ -8,7 +8,7 @@ export async function PATCH(
   const { id } = await context.params;
   const { name, members } = await request.json();
   
-  const updatedGroup = store.editGroup(id, name, members);
+  const updatedGroup = await store.editGroup(id, name, members);
   
   if (!updatedGroup) {
     return new NextResponse('Group not found', { status: 404 });
@@ -23,7 +23,7 @@ export async function DELETE(
 ): Promise<NextResponse> {
   const { id } = await context.params;
   
-  const deleted = store.deleteGroup(id);
+  const deleted = await store.deleteGroup(id);
   
   if (!deleted) {
     return new NextResponse('Group not found', { status: 404 });
@@ -37,7 +37,7 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
   const { id } = await context.params;
-  const group = store.getGroup(id);
+  const group = await store.getGroup(id);
   
   if (!group) {
     return new NextResponse('Group not found', { status: 404 });
