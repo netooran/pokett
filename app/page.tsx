@@ -15,16 +15,10 @@ export default function Home() {
           </p>
           <div className="flex justify-center gap-4 mt-8">
             <Link
-              href="/signup"
+              href="/login"
               className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-700 hover:bg-indigo-800"
             >
               Get Started - It&apos;s Free
-            </Link>
-            <Link
-              href="/groups"
-              className="inline-flex items-center px-6 py-3 border border-indigo-700 text-base font-medium rounded-md text-indigo-700 hover:bg-indigo-50"
-            >
-              View Groups
             </Link>
           </div>
         </div>

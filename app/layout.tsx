@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
-import Link from 'next/link';
+
 import './globals.css';
 import PWARegistration from './components/PWARegistration';
+import StytchProvider from './components/StytchProvider';
+import Header from './components/Header';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -53,23 +55,19 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+ 
+
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <PWARegistration />
-        <header className="bg-white shadow">
-          <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-            <h1 className="text-3xl font-bold text-gray-900">
-              <Link href="/" className="text-indigo-600 hover:text-indigo-700">
-                <span className="font-mono">Pokett</span>
-              </Link>
-            </h1>
-          </div>
-        </header>
-        {children}
-      </body>
-    </html>
+    <StytchProvider>
+      <html lang="en">
+        <body
+          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        >
+          <PWARegistration />
+          <Header />
+          {children}
+        </body>
+      </html>
+    </StytchProvider>
   );
 }

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { DeleteConfirmationModal } from '@/app/components/DeleteConfirmationModal';
 import { Member, Group } from '@/types/models';
 import { formatCurrency } from '@/utils/currencyUtils';
+import useRequireAuth from '../hooks/useRequireAuth';
 
 interface EditGroupModalProps {
   group: Group;
@@ -205,6 +206,8 @@ function EditGroupModal({
 }
 
 export default function GroupsPage() {
+  useRequireAuth();
+  
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [groups, setGroups] = useState<Group[]>([]);
   const [allMembers, setAllMembers] = useState<Member[]>([]);
