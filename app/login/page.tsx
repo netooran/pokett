@@ -2,7 +2,7 @@
 
 import { useStytchUser } from '@stytch/nextjs';
 import { StytchLogin } from '@stytch/nextjs';
-import { Products } from '@stytch/vanilla-js';
+import { OAuthProviders, Products } from '@stytch/vanilla-js';
 import { useRouter } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 import { getDomainFromWindow } from '@/utils/urlUtils';
@@ -40,7 +40,10 @@ export default function LoginPage() {
 
   const config = useMemo(
     () => ({
-      products: [Products.emailMagicLinks],
+      products: [Products.emailMagicLinks, Products.oauth],
+      oauthOptions: {
+        providers: [{ type: OAuthProviders.Google }],
+      },
       emailMagicLinksOptions: {
         loginRedirectURL: redirectURL,
         loginExpirationMinutes: 60,

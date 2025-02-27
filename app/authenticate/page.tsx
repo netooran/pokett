@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useStytchUser, useStytch } from '@stytch/nextjs';
 
 const MAGIC_LINKS_TOKEN = 'magic_links';
-
+const OAUTH_TOKEN = 'oauth';
 /**
  * During the Magic link flow, Stytch will redirect the user back to your application to a specified redirect URL (see Login.tsx).
  * Stytch will append query parameters to the redirect URL which are then used to complete the authentication flow.
@@ -29,6 +29,10 @@ const Authenticate = () => {
 
       if (token && stytch_token_type === MAGIC_LINKS_TOKEN) {
         stytch.magicLinks.authenticate(token, {
+          session_duration_minutes: 60,
+        });
+      } else if (token && stytch_token_type === OAUTH_TOKEN) {
+        stytch.oauth.authenticate(token, {
           session_duration_minutes: 60,
         });
       }
