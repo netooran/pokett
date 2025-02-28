@@ -1,16 +1,14 @@
 import { Group, Member, Expense } from '@/types/models';
-import { connectToDatabase } from './mongodb';
+import { db } from './mongodb';
 
 class Store {
   // Member methods
   async getAllMembers(): Promise<Member[]> {
-    const { db } = await connectToDatabase();
     const members = await db.collection('members').find({}).toArray();
     return members;
   }
 
   async addMember(name: string): Promise<Member> {
-    const { db } = await connectToDatabase();
     const newMember: Member = {
       id: Date.now().toString(),
       name,
@@ -21,13 +19,11 @@ class Store {
 
   // Group methods
   async getAllGroups(): Promise<Group[]> {
-    const { db } = await connectToDatabase();
     const groups = await db.collection('groups').find({}).toArray();
     return groups;
   }
 
   async addGroup(name: string, members: string[]): Promise<Group> {
-    const { db } = await connectToDatabase();
     const newGroup: Group = {
       id: Date.now().toString(),
       name,
@@ -45,7 +41,6 @@ class Store {
     name: string,
     members: string[]
   ): Promise<Group | null> {
-    const { db } = await connectToDatabase();
     const group = await db.collection('groups').findOne({ id });
     if (!group) return null;
 
@@ -89,18 +84,15 @@ class Store {
 
   // Add delete method
   async deleteGroup(id: string): Promise<boolean> {
-    const { db } = await connectToDatabase();
     const result = await db.collection('groups').deleteOne({ id });
     return result.deletedCount > 0;
   }
 
   async getGroup(id: string): Promise<Group | null> {
-    const { db } = await connectToDatabase();
     return (await db.collection('groups').findOne({ id })) || null;
   }
 
   async getGroupExpenses(groupId: string): Promise<Expense[]> {
-    const { db } = await connectToDatabase();
     return await db.collection('expenses').find({ groupId }).toArray();
   }
 
@@ -112,8 +104,6 @@ class Store {
     splitBetween: string[],
     type: 'expense' | 'settlement' = 'expense'
   ): Promise<Expense> {
-    const { db } = await connectToDatabase();
-
     const newExpense: Expense = {
       id: Date.now().toString(),
       groupId,
@@ -143,8 +133,6 @@ class Store {
     paidBy: string,
     splitBetween: string[]
   ): Promise<Expense | null> {
-    const { db } = await connectToDatabase();
-
     // Find existing expense
     const expense = await db.collection('expenses').findOne({
       id: expenseId,
@@ -183,8 +171,6 @@ class Store {
   }
 
   async deleteExpense(groupId: string, expenseId: string): Promise<boolean> {
-    const { db } = await connectToDatabase();
-
     // Find existing expense
     const expense = await db.collection('expenses').findOne({
       id: expenseId,
@@ -211,8 +197,6 @@ class Store {
     groupId: string,
     memberName: string
   ): Promise<boolean> {
-    const { db } = await connectToDatabase();
-
     const expense = await db.collection('expenses').findOne({
       groupId,
       $or: [{ paidBy: memberName }, { splitBetween: memberName }],

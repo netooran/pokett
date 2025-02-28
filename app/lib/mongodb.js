@@ -32,3 +32,7 @@ export async function connectToDatabase() {
 
   return { client, db };
 }
+
+const { client, db } = await connectToDatabase();
+
+export { client, db };
