@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useStytch, useStytchUser } from '@stytch/nextjs';
+import { User } from '@stytch/vanilla-js';
 
 const Profile = () => {
   const stytch = useStytch();
@@ -9,9 +10,7 @@ const Profile = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const profileImage = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-    `${user?.name.first_name} ${user?.name.last_name}` || 'User'
-  )}&background=random&color=ffffff`;
+  const profileImage = getUserProfilePicture(user);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -83,3 +82,12 @@ const Profile = () => {
 };
 
 export default Profile;
+
+function getUserProfilePicture(user: User | null) {
+  return (
+    user?.providers?.find((p) => p.profile_picture_url)?.profile_picture_url ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      `${user?.name.first_name} ${user?.name.last_name}` || 'User'
+    )}&background=random&color=ffffff`
+  );
+}
