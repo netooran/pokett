@@ -1,36 +1,68 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pokett
 
-## Getting Started
+<div align="center">
+  <h1 class="text-3xl font-bold text-gray-900"><a class="text-indigo-600 hover:text-indigo-700" href="/"><span class="font-mono">Pokett</span></a></h1>
+  <p><strong>Track, split, and settle expenses with friends and groups. No more awkward money talks.</strong></p>
+</div>
 
-First, run the development server:
+## 🚀 Features
+
+- **Group Management** - Create groups for trips, roommates, or events to manage expenses together
+- **Expense Tracking** - Log and categorize all your shared expenses in one place
+- **Smart Splitting** - Split bills fairly among group members with customizable options
+- **Instant Calculations** - Automatically calculate who owes what for each expense
+- **Balance Overview** - See outstanding balances at a glance with intuitive visualizations
+- **Easy Settlement** - Settle debts with just a few clicks
+
+## 💻 Tech Stack
+
+- **Frontend**: Next.js
+- **Database**: MongoDB
+- **Authentication**: Stytch
+- **Hosting**: Vercel (app) and MongoDB Atlas (database)
+
+## 📱 Availability
+
+Pokett is currently available as a Progressive Web App (PWA) that can be installed on both desktop and mobile devices. A dedicated mobile app using React Native is in development.
+
+## 🛠️ Installation
+
+Visit [pokett.vercel.app](https://pokett.vercel.app/) and install the PWA on your device:
+- **Android**: Tap the "Add to Home Screen" option in your browser menu
+- **iOS**: Tap the Share button, then "Add to Home Screen"
+- **Desktop**: Click the install icon in your browser's address bar
+
+## 💡 Getting Started (Development)
 
 ```bash
+# Clone the repository
+git clone https://github.com/netooran/pokett.git
+
+# Navigate to the project directory
+cd pokett
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
+
+# Start the development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🤝 Contributing
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Pokett is an open-source project and we welcome contributions from the community! Check out our [Contributing Guide](CONTRIBUTING.md) to get started.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📄 License
 
-## Learn More
+Pokett is free and open-source software licensed under the [MIT License](LICENSE).
 
-To learn more about Next.js, take a look at the following resources:
+## 👥 Maintainers
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [Netooran](https://github.com/netooran)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 📧 Contact
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+For questions or feedback, please [open an issue](https://github.com/netooran/pokett/issues) or contact us at info@cocoexperiments.com
